@@ -1,5 +1,5 @@
 import { PLANS } from '@/lib/plans';
-import { synthesisSchema, type Evidence, type Input, type Synthesis } from '@/lib/types';
+import { synthesisSchema, type Evidence, type Input, type Synthesis, type Snapshot } from '@/lib/types';
 import { domainOf } from './ingest';
 export function template(input: Input, evidence: Evidence[]): Synthesis {
   const plan = PLANS[input.plan], domains = input.competitors.map(domainOf), finance = evidence.filter(e => e.category === 'Financial'), ux = evidence.filter(e => e.category === 'UX Friction');
@@ -13,9 +13,15 @@ export function template(input: Input, evidence: Evidence[]): Synthesis {
     sprints: Array.from({ length: plan.sprints }, (_, i) => ({ id: `sprint-${i + 1}`, title: ['Validate the ROI narrative', 'Test a faster first outcome', 'Find the underserved channel', 'Localize the comparison page', 'Interview the buying committee'][i], budget: Math.floor(input.budget * 0.3 / plan.sprints), hypothesis: `In ${input.region}, a ${i % 2 ? 'focused UX demo' : 'transparent cost narrative'} will generate qualified interest among the ICP.`, kpi: '≥3 qualified conversations; cost per qualified lead below pilot budget / 3', duration: '14 days', targetAccounts: [domainOf(input.product)], messaging: 'Would a short, opt-in workflow and ROI assessment be useful? No competitor claims or guaranteed outcomes.' })),
   };
 }
-export async function synthesize(input: Input, evidence: Evidence[]) {
+export async function synthesize(input: Input, evidence: Evidence[], snapshots: Snapshot[] = []) {
   const fallback = template(input, evidence);
-  const prompt = `Return ONLY a JSON object matching this exact shape and array counts: ${JSON.stringify(fallback)}. Use the following evidence to replace hypotheses where supported. Never present simulated evidence as fact. Respect budget ${input.budget}, region ${input.region}. Evidence: ${JSON.stringify(evidence)}.`;
+  if (snapshots.length > 1) {
+    const own = snapshots[0], competitor = snapshots[1];
+    fallback.summary = `${own.domain} has ${own.visits.toLocaleString('en-US')} monthly visits vs ${competitor.domain} at ${competitor.visits.toLocaleString('en-US')}. ${fallback.summary}`;
+    const keyword = competitor.metrics?.topKeywords.value[2];
+    if (keyword) fallback.sprints[0].hypothesis = `A comparison landing page targeting “${keyword}” will convert high-intent visitors in ${input.region} into at least 3 qualified conversations. Validate modeled keyword demand before spending.`;
+  }
+  const prompt = `Return ONLY a JSON object matching this exact shape and array counts: ${JSON.stringify(fallback)}. Use the following evidence and structured comparison metrics to replace hypotheses where supported. Never present simulated evidence as fact. Respect budget ${input.budget}, region ${input.region}. Evidence: ${JSON.stringify(evidence)}. Comparison data: ${JSON.stringify(snapshots.map(s => ({ domain: s.domain, metrics: s.metrics })))}.`;
   try {
     let content = '', provider = '';
     if (process.env.ANTHROPIC_API_KEY) {

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176 176">
+  <title>Boo app icon</title>
+  <style>:root{color-scheme:light dark}.ink{fill:CanvasText}.eyes{fill:none;stroke:Canvas;stroke-width:5;stroke-linecap:round}</style>
+  <ellipse class="ink" cx="88" cy="153" rx="35" ry="5" opacity=".1"/>
+  <path class="ink" d="M42 127V65C42 35 60 19 85 18C115 17 133 39 133 69V127Q133 132 127 128L116 123Q111 121 106 126L98 132Q92 137 86 131L78 125Q73 121 67 127L60 131Q54 135 48 129Z"/>
+  <path class="eyes" d="M63 72Q69 67 75 72M99 72Q105 67 111 72"/>
+  <path class="ink" d="M142 24Q143 34 152 35Q143 37 142 46Q140 37 132 35Q140 34 142 24Z"/>
+</svg>

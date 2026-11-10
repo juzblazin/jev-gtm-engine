@@ -1,20 +1,24 @@
 import { get, put } from '@/lib/store';
 import { fetchPublic } from '@/lib/net';
 import type { Snapshot, Snippet } from '@/lib/types';
+import { seededMetrics } from '@/lib/metrics';
 export function isFresh(date: string, now = Date.now()) { const age = now - Date.parse(date); return age >= 0 && age < 7 * 86400000; }
 export const domainOf = (url: string) => new URL(url).hostname.toLowerCase();
 const channels = ['reviews / G2', 'pricing', 'ad copy', 'traffic', 'social', 'changelog / news'];
 const samples = ['Pricing increases and hidden fees make ROI difficult to justify.', 'Onboarding is confusing and the workflow is slow for daily operators.', 'Save time with an all-in-one platform. Pricing requires a sales call.', 'Acquisition costs are expensive; budget predictability matters.', 'Setup is difficult, but the team likes the interface.', 'New onboarding workflow and transparent billing released this quarter.'];
-export async function ingest(url: string): Promise<{ snapshot: Snapshot; cached: boolean }> {
+export async function ingest(url: string, progress: (channel: string, percent: number) => void = () => {}): Promise<{ snapshot: Snapshot; cached: boolean }> {
   const domain = domainOf(url), cached = await get<Snapshot>('snapshot:' + domain);
-  if (cached && isFresh(cached.fetchedAt)) return { snapshot: cached, cached: true };
-  let visits = 65000, router = 'deterministic traffic estimate', trafficSource: 'live' | 'simulated' = 'simulated';
+  if (cached?.metrics && isFresh(cached.fetchedAt)) { channels.forEach(c => progress(c, 100)); return { snapshot: cached, cached: true }; }
+  const metrics = seededMetrics(domain);
+  let visits = metrics.visits.value, router = 'deterministic traffic estimate', trafficSource: 'live' | 'simulated' = 'simulated';
+  progress('traffic', 10);
   if (process.env.SIMILARWEB_API_KEY) {
     try {
       const d = new Date(); d.setUTCMonth(d.getUTCMonth() - 2); const month = d.toISOString().slice(0, 7);
       const r = await fetch(`https://api.similarweb.com/v1/website/${domain}/total-traffic-and-engagement/visits?api_key=${encodeURIComponent(process.env.SIMILARWEB_API_KEY)}&start_date=${month}&end_date=${month}&main_domain_only=false&granularity=monthly`, { signal: AbortSignal.timeout(6000) });
       if (!r.ok) throw new Error('Similarweb unavailable'); const data = await r.json(); const n = data.visits?.[0]?.visits;
       if (typeof n !== 'number') throw new Error('No traffic result'); visits = n; router = 'Similarweb'; trafficSource = 'live';
+      metrics.trend = { value: data.visits.map((v: { visits: number }) => v.visits), source: 'live' };
     } catch { router = 'Similarweb unavailable → simulated'; }
   }
   if (visits < 100000 && process.env.APIFY_TOKEN && process.env.APIFY_ACTOR_ID) {
@@ -27,6 +31,7 @@ export async function ingest(url: string): Promise<{ snapshot: Snapshot; cached:
     try { const r = await fetchPublic(process.env.ONELOOKUP_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.ONELOOKUP_API_KEY}` }, body: JSON.stringify({ domain }) }); const d = await r.json(); if (!r.ok || typeof d.visits !== 'number') throw new Error('Invalid traffic'); visits = d.visits; trafficSource = 'live'; router = '1Lookup adapter'; } catch { router += ' → 1Lookup unavailable'; }
   }
   const snippets = await Promise.all(channels.map(async (channel, i): Promise<Snippet> => {
+    progress(channel, 25);
     let text = samples[i], source: Snippet['source'] = 'simulated';
     if (channel === 'pricing') {
       for (const route of ['/pricing', '/']) {
@@ -34,7 +39,9 @@ export async function ingest(url: string): Promise<{ snapshot: Snapshot; cached:
       }
     }
     if (channel === 'traffic') { text = `${visits.toLocaleString('en-US')} estimated monthly visits. ${router}. Acquisition costs and budget efficiency require validation.`; source = trafficSource; }
+    progress(channel, 100);
     return { id: `${domain}:${i}`, domain, channel, text, source };
   }));
-  const snapshot = { domain, snippets, visits, router, fetchedAt: new Date().toISOString() }; await put('snapshot:' + domain, snapshot); return { snapshot, cached: false };
+  metrics.visits = { value: visits, source: trafficSource };
+  const snapshot = { domain, snippets, visits, router, metrics, fetchedAt: new Date().toISOString() }; await put('snapshot:' + domain, snapshot); return { snapshot, cached: false };
 }

@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import type { SiteMetrics } from './metrics';
 export const inputSchema = z.object({ product: z.string().url(), competitors: z.array(z.string().url()).min(1).max(5), budget: z.number().positive().max(100000000), region: z.enum(['US', 'EU', 'UK', 'Global']), plan: z.enum(['FREE_TRIAL', 'PREMIUM', 'SCALE']) });
 export type Input = z.infer<typeof inputSchema>;
 export type Snippet = { id: string; domain: string; channel: string; text: string; source: 'live' | 'simulated' };
 export type Evidence = Snippet & { category: 'Financial' | 'UX Friction' | 'Other'; severity: number; confidence: number; quote: string; velocity?: number };
-export type Snapshot = { domain: string; fetchedAt: string; snippets: Snippet[]; visits: number; router: string };
+export type Snapshot = { domain: string; fetchedAt: string; snippets: Snippet[]; visits: number; router: string; metrics?: SiteMetrics };
 export const synthesisSchema = z.object({
   summary: z.string(), icp: z.object({ industry: z.string(), size: z.string(), revenue: z.string(), triggers: z.array(z.string()) }),
   matrix: z.array(z.object({ dimension: z.string(), product: z.string(), competitors: z.array(z.object({ domain: z.string(), finding: z.string() })) })),
@@ -14,4 +15,5 @@ export const synthesisSchema = z.object({
 });
 export type Synthesis = z.infer<typeof synthesisSchema>;
 export type Compliance = { region: string; score: number; risk: 'low' | 'review' | 'high'; rationale: string; rewrite: string };
-export type Run = { id: string; workspace: string; createdAt: string; input: Input; evidence: Evidence[]; noiseFiltered: number; snapshots: Snapshot[]; output: Synthesis; compliance: Compliance[][]; timings: Record<string, number>; providers: Record<string, string> };
+export type Story = { title: string; sections: { heading: string; body: string }[]; provider: string };
+export type Run = { id: string; workspace: string; createdAt: string; input: Input; evidence: Evidence[]; noiseFiltered: number; snapshots: Snapshot[]; output: Synthesis; compliance: Compliance[][]; timings: Record<string, number>; providers: Record<string, string>; stage?: 'comparison' | 'analysis' | 'strategy'; story?: Story };
