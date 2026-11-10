@@ -48,6 +48,51 @@ Boo uses Jev AI for triage when configured, with a deterministic local fallback.
 
 Every supported key is documented in `.env.example`. Anthropic/Gemini and CRM endpoints use official REST URL patterns but were not tested with real credentials. Never commit `.env.local`. Restart after changing env. External requests can fail from anti-bot protections; the UI continues using explicitly labeled simulated observations. User-entered fetch/webhook URLs reject private hosts/IP literals and redirects; deploy behind network egress controls for robust DNS-rebinding protection. Anonymous cookies are not production auth. Do not expose this demo publicly with provider credentials without access controls.
 
+## Cloudflare Workers (OpenNext)
+
+Uses `@opennextjs/cloudflare` 1.20.16 and Wrangler 4.160.0, following https://opennext.js.org/cloudflare/get-started. Use Node.js 22.12+ (or Node.js 24). This targets **Workers**, not Cloudflare Pages. No deployment is performed by installing or building.
+
+```bash
+npm ci
+npm run cf-build                 # opennextjs-cloudflare build
+npm run preview                  # rebuild, then run local Workers preview
+# Or, after building: npx wrangler dev --local --port 8787
+```
+
+`wrangler.jsonc` names the Worker `boo-gtm-engine`, enables Node.js compatibility and binds static assets and the self-reference service. `.open-next/` and `.wrangler/` are generated and ignored. The OpenNext config uses the default dummy incremental/tag caches: there is no R2/ISR cache to provision. All application persistence and snapshot freshness caching remain in Neon. Immutable Next.js assets use `public/_headers`.
+
+### Prepare a fresh Neon database
+
+Use a Neon database-owner connection string. The commands below create the pgvector extension first, then let Drizzle create `jev_records` (the existing table name is preserved for compatibility):
+
+```bash
+export DATABASE_URL='your Neon Postgres connection string'
+npm run db:prepare
+npm run db:push
+```
+
+Run these on your machine or in a controlled migration job, not inside the Worker. `db:prepare` is idempotent; review any Drizzle schema-change prompts against existing databases. These commands require a real Neon database and permission to create the extension. No real Neon credentials were available during preparation.
+
+### Set secrets and deploy (only when ready)
+
+Set `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `DATABASE_URL` in your terminal environment. Use an account-scoped token with Workers Scripts edit permissions. Then:
+
+```bash
+npm ci
+npm run db:prepare
+npm run db:push
+printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL --name boo-gtm-engine
+npm run deploy
+```
+
+For the first deployment, Wrangler may ask to create the Worker while setting its first secret; confirm creation. `deploy` builds with OpenNext and then deploys the generated Worker/assets. The shell's `DATABASE_URL` is **not** automatically a deployed runtime binding: the `wrangler secret put` command is required. Secrets survive subsequent deployments. Add any optional provider keys from `.env.example` using the same `wrangler secret put KEY_NAME` command. Do not put secrets in `wrangler.jsonc`, commit them, or use `NEXT_PUBLIC_` names.
+
+For local preview, copy `.dev.vars.example` to `.dev.vars` and add `DATABASE_URL` there, or use the matching Next.js `.env.development.local` with `NEXTJS_ENV=development`. With **no** database URL, the Workers home page still loads, but history and analyses fail with the explicit missing-Worker-secret error. Workers never fall back to the `.data/` filesystem. Zero-key JSON persistence remains available with `npm run dev` in Node.js.
+
+The store uses request-local Neon HTTP queries (`neon()` + `drizzle-orm/neon-http`), not TCP sockets, pools or filesystem imports at module initialization. Public URL checks use Workers-supported `resolve4`/`resolve6` DNS APIs rather than unsupported `dns.lookup`. Analysis retains a standard streamed `ReadableStream`/`text/event-stream` response, covered by a non-buffering regression test. A complete streamed analysis on Workers still needs a configured Neon secret and should be smoke-tested after provisioning it; no credentialed database integration was tested here.
+
+This preparation does not add authentication or cross-isolate transactions. The process-local trial/advance locks do not provide multi-isolate transaction guarantees; harden those before using demo plan switching as a paid entitlement boundary. Review Workers CPU/subrequest limits for your plan, especially with all providers enabled. Existing anonymous-cookie and egress-security limitations still apply.
+
 ## Checks & API
 
 `npm run lint && npx tsc --noEmit && npx vitest run && npm run build`

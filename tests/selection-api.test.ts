@@ -13,6 +13,24 @@ const input = { product: 'https://linear.app', competitors: ['https://asana.com'
 const request = (competitors: string[]) => new Request('http://localhost/api/analyze', { method: 'POST', body: JSON.stringify({ ...input, competitors }) });
 
 describe('normalized competitor identity', () => {
+  it('streams SSE progress before ingestion completes without buffering the response', async () => {
+    let complete!: () => void;
+    const gate = new Promise<void>(resolve => { complete = resolve; });
+    mocks.pipeline.mockImplementationOnce(async (_input, _workspace, emit) => {
+      emit({ type: 'progress', layer: 'Layer 1', status: 'Gathering' });
+      await gate;
+      emit({ type: 'result', run: { id: 'streamed' } });
+    });
+    const response = await POST(request(['https://asana.com']));
+    expect(response.headers.get('Content-Type')).toBe('text/event-stream');
+    expect(response.headers.get('Cache-Control')).toBe('no-cache');
+    const reader = response.body!.getReader();
+    const first = await reader.read();
+    expect(new TextDecoder().decode(first.value)).toContain('Gathering');
+    complete();
+    expect(new TextDecoder().decode((await reader.read()).value)).toContain('streamed');
+    expect((await reader.read()).done).toBe(true);
+  });
   it.each([
     ['https://asana.com', 'https://asana.com'],
     ['https://www.ASANA.com/pricing', 'http://asana.com/'],
