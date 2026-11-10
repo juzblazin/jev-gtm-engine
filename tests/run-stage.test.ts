@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runStep } from '../src/lib/run-stage';
+import { runStep, strategyBackLink } from '../src/lib/run-stage';
 import { template } from '../src/lib/pipeline/synthesize';
 import type { Run } from '../src/lib/types';
 
@@ -8,6 +8,17 @@ const legacy: Run = { id: 'legacy', workspace: 'test', createdAt: '', input, sna
 const story: Run['story'] = { title: 'Analysis', sections: [], provider: 'deterministic' };
 
 describe('saved run stage inference', () => {
+  it('provides a working comparison back link when a legacy strategy has no story', () => {
+    const back = strategyBackLink(legacy);
+    expect(back).toEqual({ href: '/run/legacy?step=compare', label: 'Back to comparison' });
+    expect(runStep(legacy, new URL(back.href, 'http://localhost').searchParams.get('step'))).toBe('compare');
+  });
+  it('keeps the story back link when an analysis is available', () => {
+    const run = { ...legacy, story, stage: 'strategy' as const };
+    const back = strategyBackLink(run);
+    expect(back).toEqual({ href: '/run/legacy?step=analysis', label: 'Back to the story' });
+    expect(runStep(run, 'analysis')).toBe('analysis');
+  });
   it('reopens a pre-guided completed playbook without a stage or story', () => {
     expect(runStep(legacy)).toBe('strategy');
     expect(runStep(legacy, 'strategy')).toBe('strategy');
