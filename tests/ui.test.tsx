@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import Comparison, { SourceBadge } from '../src/components/comparison';
 import Ghost from '../src/components/ghost';
+import Witch from '../src/components/witch';
 import type { Run } from '../src/lib/types';
 import { seededMetrics } from '../src/lib/metrics';
 describe('Arc comparison states', () => {
@@ -38,5 +39,22 @@ describe('original Jev ghost', () => {
     expect(done).toContain('data-mode="done"');
     expect(done).toContain('ghost-sparkle');
     expect(done).not.toEqual(working);
+  });
+});
+describe('young brewing witch', () => {
+  it('renders a working brew with a stirring arm, bubbles and steam', () => {
+    const html = renderToStaticMarkup(createElement(Witch));
+    expect(html).toContain('data-mode="working"');
+    expect(html).toContain('Young witch stirring a bubbling cauldron');
+    expect(html).toContain('width="200"');
+    expect(html).toContain('bubble');
+    expect(html).toContain('steam');
+  });
+  it('changes expression and pose on completion while respecting size', () => {
+    const html = renderToStaticMarkup(createElement(Witch, { size: 96, mode: 'done' }));
+    expect(html).toContain('width="96"');
+    expect(html).toContain('data-mode="done"');
+    expect(html).toContain('celebrating her finished brew');
+    expect(html).not.toEqual(renderToStaticMarkup(createElement(Witch)));
   });
 });

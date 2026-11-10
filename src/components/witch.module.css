@@ -1,0 +1,15 @@
+.witch { display: inline-block; overflow: visible; vertical-align: middle; }
+.arm { transform-origin: 91px 160px; animation: stir calc(var(--duration-considered) * 3) var(--ease-standard) infinite; }
+.bubble { transform-box: fill-box; transform-origin: center; animation: rise calc(var(--duration-considered) * 4) var(--ease-standard) infinite; }
+.second { animation-delay: calc(var(--duration-considered) * -1); }
+.third { animation-delay: calc(var(--duration-considered) * -2); }
+.steam { animation: steam calc(var(--duration-considered) * 5) var(--ease-standard) infinite; }
+.sparkle { transform-origin: 199px 110px; opacity: .5; }
+.witch[data-mode="done"] .arm { animation: none; transform: rotate(-20deg); }
+.witch[data-mode="done"] .sparkle { animation: celebrate var(--duration-considered) var(--ease-standard) both; }
+.witch[data-mode="done"] .bubble,.witch[data-mode="done"] .steam { animation: none; opacity: .35; }
+@keyframes stir { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(8deg); } }
+@keyframes rise { 0% { transform: translateY(0) scale(.7); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-28px) scale(.9); opacity: 0; } }
+@keyframes steam { 0%,100% { transform: translateY(0); opacity: .15; } 50% { transform: translateY(-6px); opacity: .45; } }
+@keyframes celebrate { from { transform: scale(.4); opacity: .2; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .arm,.bubble,.steam,.witch[data-mode="done"] .sparkle { animation: none; } .bubble { opacity: .7; } .steam { opacity: .3; } }
