@@ -16,9 +16,13 @@ On Linux/Windows install Node from https://nodejs.org and follow steps 3–7 (Wi
 
 ## Using the playbook
 
+### Theme and mascot
+
+The interface uses free Arc UI components installed through the shadcn registry, shared semantic tokens, and locally bundled Geist and Inter fonts. Light mode is the default; the header theme switch saves your preference. The original SVG ghost in `src/components/ghost.tsx` accepts `size` and `mode` (`idle`, `working`, `done`). It floats, waves its hem, blinks, and celebrates completion, with a static reduced-motion alternative. It is our own illustration, not Arc Pro source. `src/app/icon.svg` is its static app icon.
+
 ### Guided experience
 
-Start at `/` with just your domain. `/analyze?domain=…` offers selectable competitor cards (Similarweb similar-sites when available; clearly simulated category peers otherwise), custom competitors, and optional budget/region controls. Submit streams real worker-completion percentages while the inline animated witch gathers data. Each saved `/run/[id]?step=compare|analysis|strategy` is refreshable in the same cookie workspace. Comparison includes stable domain-seeded metrics, an offline SVG regional choropleth, sample ads, social and creator signals. **Only monthly visits/trend currently use Similarweb traffic results; other structured metrics remain labeled simulated.** The trend may be one point when only one provider month is returned.
+Start at `/` with just your domain. `/analyze?domain=…` offers selectable competitor cards (Similarweb similar-sites when available; clearly simulated category peers otherwise), custom competitors, and optional budget/region controls. Submit streams real worker-completion percentages while the original animated Jev ghost gathers data. Each saved `/run/[id]?step=compare|analysis|strategy` is refreshable in the same cookie workspace. Comparison includes stable domain-seeded metrics, an offline SVG regional choropleth, sample ads, social and creator signals. **Only monthly visits/trend currently use Similarweb traffic results; other structured metrics remain labeled simulated.** The trend may be one point when only one provider month is returned.
 
 “Analyse with Jev” runs triage and a metric-difference narrative; “Generate strategy” separately runs synthesis and compliance. Both use keyed LLM providers or deterministic fallbacks, then persist their outputs. Strategy reuses approvals, tier-gated exports, evidence and compliance. The header Workspace link keeps the original history and suppression tools accessible. Home also links recent saved runs. Plan selection is stored in this browser; run entitlements stay pinned to the plan used when gathering. In-progress gathering is not persisted until all workers finish; refresh during gathering restarts selection, while completed runs are durable.
 
