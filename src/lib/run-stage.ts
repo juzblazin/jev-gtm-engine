@@ -1,0 +1,8 @@
+import type { Run } from './types';
+
+export function runStep(run: Run | null, requested?: string | null): 'compare' | 'analysis' | 'strategy' {
+  const saved = run?.stage || (run?.providers.synthesis || run?.timings.synthesis !== undefined || run?.timings.strategy !== undefined || run?.compliance.length ? 'strategy' : run?.story ? 'analysis' : run?.output.sprints.length ? 'strategy' : 'comparison');
+  if (requested === 'compare') return 'compare';
+  if (requested === 'analysis' && run?.story) return 'analysis';
+  return saved === 'comparison' ? 'compare' : saved;
+}
