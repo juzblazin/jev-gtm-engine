@@ -2,7 +2,7 @@ import styles from './witch.module.css';
 
 export default function Witch({ size = 200, mode = 'working' }: { size?: number; mode?: 'working' | 'done' }) {
   const done = mode === 'done';
-  return <svg className={styles.witch} data-mode={mode} width={size} height={size} viewBox="0 0 240 240" role="img" aria-label={done ? 'Young witch celebrating her finished brew' : 'Young witch stirring a bubbling cauldron'}>
+  return <svg className={styles.witch} data-mode={mode} width={size} height={size} viewBox="0 0 240 240" role="img" aria-label={done ? 'Boo\'s young witch celebrating her finished brew' : 'Boo\'s young witch stirring a bubbling cauldron'}>
     <ellipse cx="125" cy="222" rx="88" ry="5" fill="var(--foreground)" opacity=".06"/>
     <path d="M48 154Q41 183 46 207L100 207L103 160Z" fill="var(--text-secondary)"/>
     <path d="M53 109Q39 120 44 145L51 155L59 142L68 153L80 141L91 151L100 137L95 112Z" fill="var(--foreground)"/>

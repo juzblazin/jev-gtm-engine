@@ -24,7 +24,7 @@ describe('Arc comparison states', () => {
     expect(html).toContain('Schematic world choropleth');
   });
 });
-describe('original Jev ghost', () => {
+describe('original Boo ghost', () => {
   it('renders an idle mascot at the requested size without browser globals', () => {
     const html = renderToStaticMarkup(createElement(Ghost, { size: 112 }));
     expect(html).toContain('width="112"');
@@ -45,7 +45,7 @@ describe('young brewing witch', () => {
   it('renders a working brew with a stirring arm, bubbles and steam', () => {
     const html = renderToStaticMarkup(createElement(Witch));
     expect(html).toContain('data-mode="working"');
-    expect(html).toContain('Young witch stirring a bubbling cauldron');
+    expect(html).toContain("Boo&#x27;s young witch stirring a bubbling cauldron");
     expect(html).toContain('width="200"');
     expect(html).toContain('bubble');
     expect(html).toContain('steam');

@@ -1,6 +1,6 @@
 export type GhostMode = 'idle' | 'working' | 'done';
 export default function Ghost({ size = 96, mode = 'idle' }: { size?: number; mode?: GhostMode }) {
-  return <svg className="jev-ghost" data-mode={mode} width={size} height={size} viewBox="0 0 176 176" role="img" aria-label={`Jev mascot, ${mode}`}>
+  return <svg className="boo-ghost" data-mode={mode} width={size} height={size} viewBox="0 0 176 176" role="img" aria-label={`Boo mascot, ${mode}`}>
     <ellipse className="ghost-shadow" cx="88" cy="153" rx="35" ry="5"/>
     <g className="ghost-float">
       <path className="ghost-sheet" d="M42 115V65C42 35 60 19 85 18C115 17 133 39 133 69V115Z"/>

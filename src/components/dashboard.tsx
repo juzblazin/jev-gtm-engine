@@ -27,7 +27,7 @@ export default function Dashboard({ initialRun = null, embedded = false }: { ini
     if (!run) return; setExportResult('');
     try { const r = await fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ runId: run.id, kind, approved, ...(webhook ? { url: webhook } : {}) }) });
       if (!r.ok) throw new Error((await r.json()).error);
-      if (kind === 'csv') { const url = URL.createObjectURL(await r.blob()); const a = document.createElement('a'); a.href = url; a.download = 'jev-sprints.csv'; a.click(); URL.revokeObjectURL(url); setNotice('CSV downloaded.'); } else setExportResult(JSON.stringify(await r.json(), null, 2));
+      if (kind === 'csv') { const url = URL.createObjectURL(await r.blob()); const a = document.createElement('a'); a.href = url; a.download = 'boo-sprints.csv'; a.click(); URL.revokeObjectURL(url); setNotice('CSV downloaded.'); } else setExportResult(JSON.stringify(await r.json(), null, 2));
     } catch (e) { setError((e as Error).message); }
   }
   const activePlan = run ? PLANS[run.input.plan] : PLANS[plan];
