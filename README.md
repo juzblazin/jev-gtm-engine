@@ -16,6 +16,12 @@ On Linux/Windows install Node from https://nodejs.org and follow steps 3–7 (Wi
 
 ## Using the playbook
 
+### Guided experience
+
+Start at `/` with just your domain. `/analyze?domain=…` offers selectable competitor cards (Similarweb similar-sites when available; clearly simulated category peers otherwise), custom competitors, and optional budget/region controls. Submit streams real worker-completion percentages while the inline animated witch gathers data. Each saved `/run/[id]?step=compare|analysis|strategy` is refreshable in the same cookie workspace. Comparison includes stable domain-seeded metrics, an offline SVG regional choropleth, sample ads, social and creator signals. **Only monthly visits/trend currently use Similarweb traffic results; other structured metrics remain labeled simulated.** The trend may be one point when only one provider month is returned.
+
+“Analyse with Jev” runs triage and a metric-difference narrative; “Generate strategy” separately runs synthesis and compliance. Both use keyed LLM providers or deterministic fallbacks, then persist their outputs. Strategy reuses approvals, tier-gated exports, evidence and compliance. The header Workspace link keeps the original history and suppression tools accessible. Home also links recent saved runs. Plan selection is stored in this browser; run entitlements stay pinned to the plan used when gathering. In-progress gathering is not persisted until all workers finish; refresh during gathering restarts selection, while completed runs are durable.
+
 Six tabs cover matrix, firmographics/personas, messages with legal risk screens, modeled channel opportunities, approval-based sprint cards and sourced evidence. History reopens prior runs for this browser workspace. Clipboard works for all tiers; Premium adds CSV and Slack/Notion automation webhook POSTs; Scale adds regional variants and Attio/HubSpot REST. Approve cards in Sprint Cards before exporting. A Notion page URL is not a webhook: use a Notion automation or integration receiver that accepts JSON. CRM keys absent = dry-run preview. HubSpot creates companies and can duplicate repeated syncs; review before re-sending. Account suggestions are hypotheses (the product domain in the deterministic demo), not discovered leads. Suppression ledger entries block matching domains, subdomains or exact emails before export/sync.
 
 ## Architecture

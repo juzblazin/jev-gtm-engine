@@ -4,14 +4,25 @@ import { get, put } from '@/lib/store';
 import type { Input, Run } from '@/lib/types';
 import { ingest } from './ingest';
 import { triage } from './triage';
-import { synthesize } from './synthesize';
+import { synthesize, template } from './synthesize';
 import { scoreCompliance } from './compliance';
-export async function pipeline(input: Input, workspace: string, emit: (data: unknown) => void) {
+export async function pipeline(input: Input, workspace: string, emit: (data: unknown) => void, guided = false) {
   const start = Date.now(), timings: Record<string, number> = {};
   const stage = (layer: string, status: string, ms?: number) => emit({ type: 'progress', layer, status, ms });
   stage('Layer 1', 'Checking 7-day cache & dispatching six parallel channels'); let t = Date.now();
-  const results = await Promise.all([input.product, ...input.competitors].map(ingest));
+  const percentages = new Map<string, number>();
+  const urls = [input.product, ...input.competitors];
+  const results = await Promise.all(urls.map(url => ingest(url, (channel, percent) => {
+    percentages.set(url + channel, percent);
+    const channelPercent = Math.round(urls.reduce((n, u) => n + (percentages.get(u + channel) || 0), 0) / urls.length);
+    emit({ type: 'channel', channel, percent: channelPercent, overall: Math.round([...percentages.values()].reduce((a, b) => a + b, 0) / (urls.length * 6)) });
+  })));
   timings.ingestion = Date.now() - t; stage('Layer 1', `${results.filter(r => r.cached).length}/${results.length} domains from cache`, timings.ingestion);
+  if (guided) {
+    timings.total = Date.now() - start;
+    const run: Run = { id: randomUUID(), workspace, createdAt: new Date().toISOString(), input, evidence: [], noiseFiltered: 0, snapshots: results.map(r => r.snapshot), output: template(input, []), compliance: [], timings, providers: {}, stage: 'comparison' };
+    await put('run:' + run.id, run); const history = await get<string[]>('history:' + workspace) || []; await put('history:' + workspace, [run.id, ...history].slice(0, 100)); emit({ type: 'result', run }); return run;
+  }
   stage('Layer 1.5', 'Classifying friction & filtering confidence below 90%'); t = Date.now();
   const triaged = await triage(results.flatMap(r => r.snapshot.snippets), input.plan); timings.triage = Date.now() - t;
   stage('Layer 1.5', `${triaged.noiseFiltered}% noise filtered`, timings.triage);

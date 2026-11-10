@@ -9,6 +9,7 @@ export async function POST(req: Request) {
   const p = schema.safeParse(await req.json().catch(() => null)); if (!p.success) return Response.json({ error: 'Invalid export request.' }, { status: 400 });
   const id = await workspace(), run = await get<Run>('run:' + p.data.runId);
   if (!run || run.workspace !== id) return Response.json({ error: 'Run not found.' }, { status: 404 });
+  if (run.stage && run.stage !== 'strategy') return Response.json({ error: 'Generate the strategy before exporting sprint cards.' }, { status: 409 });
   const { kind, approved } = p.data, plan = PLANS[run.input.plan];
   if (!(kind === 'csv' ? plan.csv : kind === 'webhook' ? plan.webhook : plan.crm)) return Response.json({ error: 'This export is not included in the run’s plan.' }, { status: 403 });
   const blocked = await get<string[]>('suppression:' + id) || [];
