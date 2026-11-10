@@ -13,6 +13,28 @@ const input = { product: 'https://linear.app', competitors: ['https://asana.com'
 const request = (competitors: string[]) => new Request('http://localhost/api/analyze', { method: 'POST', body: JSON.stringify({ ...input, competitors }) });
 
 describe('normalized competitor identity', () => {
+  it.each([
+    ['https://asana.com', 'https://asana.com'],
+    ['https://www.ASANA.com/pricing', 'http://asana.com/'],
+  ])('returns 400 for duplicate identities: %s and %s', async (first, second) => {
+    const response = await POST(request([first, second]));
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(/distinct competitors.*Duplicate domains/);
+    expect(mocks.locked).not.toHaveBeenCalled();
+    expect(mocks.pipeline).not.toHaveBeenCalled();
+  });
+  it('accepts distinct competitors and starts ingestion', async () => {
+    const response = await POST(request(['https://asana.com', 'https://monday.com']));
+    expect(response.status).toBe(200);
+    await response.text();
+    expect(mocks.pipeline).toHaveBeenCalledOnce();
+  });
+  it('keeps unexpected storage failures as 500 errors', async () => {
+    mocks.locked.mockRejectedValueOnce(new Error('Storage unavailable'));
+    const response = await POST(request(['https://asana.com']));
+    expect(response.status).toBe(500);
+    expect(mocks.pipeline).not.toHaveBeenCalled();
+  });
   it('strips protocols, case, www and paths consistently', () => {
     for (const value of ['www.LINEAR.app/', 'https://WWW.Linear.App/pricing', 'LINEAR.APP']) expect(normalizeHost(value)).toBe('linear.app');
   });
