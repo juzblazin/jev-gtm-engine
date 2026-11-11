@@ -9,9 +9,33 @@ import { pricingIngest } from './pricing';
 import { persistCards, toEvidenceCards } from './cards';
 import type { Snapshot, Snippet } from '@/lib/types';
 import { seededMetrics } from '@/lib/metrics';
+import { aisaUse, hasAisa } from '@/lib/aisa';
+import { hasTreg, tregPost } from '@/lib/treg';
 
 export function isFresh(date: string, now = Date.now()) { const age = now - Date.parse(date); return age >= 0 && age < 7 * 86400000; }
 export const domainOf = (url: string) => new URL(url).hostname.toLowerCase();
+const locations: Record<string, number> = { US: 2840, UK: 2826, EU: 2276, Global: 2840 };
+function pickNum(data: unknown, keys: string[]): number | undefined {
+  if (!data || typeof data !== 'object') return undefined;
+  const d = data as Record<string, unknown>;
+  for (const k of keys) { if (typeof d[k] === 'number') return d[k] as number; }
+  for (const v of Object.values(d)) { if (v && typeof v === 'object' && !Array.isArray(v)) { const n = pickNum(v, keys); if (n !== undefined) return n; } }
+  return undefined;
+}
+function pickNestedVisits(data: unknown): number | undefined {
+  if (Array.isArray(data)) { for (const it of data) { const n = pickNum(it, ['visits']); if (n !== undefined) return n; } return undefined; }
+  if (data && typeof data === 'object') { for (const v of Object.values(data as Record<string, unknown>)) { if (Array.isArray(v)) { const n = pickNestedVisits(v); if (n !== undefined) return n; } else if (v && typeof v === 'object') { const n = pickNestedVisits(v); if (n !== undefined) return n; } } }
+  return undefined;
+}
+function pickTrend(data: unknown): number[] {
+  const series: number[] = [];
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) { v.forEach(it => { const n = it && typeof it === 'object' ? pickNum(it, ['visits']) : typeof it === 'number' ? it : undefined; if (n !== undefined) series.push(n); }); return; }
+    if (v && typeof v === 'object') Object.values(v as Record<string, unknown>).forEach(walk);
+  };
+  walk(data);
+  return series.slice(-12);
+}
 export const channels = ['reviews / G2', 'pricing', 'ad copy', 'traffic', 'social', 'changelog / news', 'seo / keywords'];
 const samples = ['Pricing increases and hidden fees make ROI difficult to justify.', 'Onboarding is confusing and the workflow is slow for daily operators.', 'Save time with an all-in-one platform. Pricing requires a sales call.', 'Acquisition costs are expensive; budget predictability matters.', 'Setup is difficult, but the team likes the interface.', 'New onboarding workflow and transparent billing released this quarter.', 'Organic rankings hold steady across core terms.'];
 export async function ingest(url: string, progress: (channel: string, percent: number) => void = () => {}, region = 'US'): Promise<{ snapshot: Snapshot; cached: boolean }> {
@@ -35,6 +59,33 @@ export async function ingest(url: string, progress: (channel: string, percent: n
       if (typeof n !== 'number') throw new Error('No traffic result'); visits = n; router = 'Similarweb'; trafficSource = 'live';
       metrics.trend = { value: data.visits.map((v: { visits: number }) => v.visits), source: 'live' };
     } catch { router = 'Similarweb unavailable → simulated'; }
+  }
+  if (trafficSource !== 'live' && hasTreg()) {
+    try {
+      const { data } = await tregPost<{ tasks?: { result?: { items?: { metrics?: { organic?: { etv?: number }; paid?: { etv?: number } } }[] }[] }[] }>('dataforseo.x.dataforseo-labs-google-bulk-traffic-estimation-live', [{ targets: [domain], location_code: locations[region] || 2840, language_code: 'en' }], 30000);
+      const m = data.tasks?.[0]?.result?.[0]?.items?.[0]?.metrics;
+      const etv = (m?.organic?.etv || 0) + (m?.paid?.etv || 0);
+      if (!etv) throw new Error('No traffic estimate');
+      visits = Math.round(etv); router = 'DataForSEO via Treg'; trafficSource = 'live';
+    } catch { router += ' → Treg traffic unavailable (simulated fallback)'; }
+  }
+  if (trafficSource !== 'live' && hasAisa()) {
+    try {
+      const d = new Date(); d.setUTCMonth(d.getUTCMonth() - 1); const month = d.toISOString().slice(0, 7);
+      const { data } = await aisaUse<Record<string, unknown>>('get_similarweb_traffic_engagement', { domain, start_date: month, end_date: month, metrics: 'visits,bounce_rate,pages_per_visit,average_visit_duration', main_domain_only: true, granularity: 'monthly', web_source: 'total' }, { capUsd: 0.5 });
+      const n = pickNum(data, ['visits', 'total_visits', 'value']) ?? pickNestedVisits(data);
+      if (typeof n !== 'number') throw new Error('No traffic result');
+      visits = n; router = 'AIsa · Similarweb engagement'; trafficSource = 'live';
+      const live = <T>(value: T) => ({ value, source: 'live' as const });
+      const bounce = pickNum(data, ['bounce_rate', 'bounceRate']);
+      if (typeof bounce === 'number') metrics.bounce = live(Math.round((bounce > 1 ? bounce : bounce * 100) * 10) / 10);
+      const pages = pickNum(data, ['pages_per_visit', 'pagesPerVisit']);
+      if (typeof pages === 'number') metrics.pages = live(Math.round(pages * 10) / 10);
+      const duration = pickNum(data, ['average_visit_duration', 'avg_visit_duration', 'averageVisitDuration']);
+      if (typeof duration === 'number') metrics.duration = live(Math.round(duration));
+      const trend = pickTrend(data);
+      if (trend.length) metrics.trend = live(trend);
+    } catch { router += ' → AIsa unavailable (simulated fallback)'; }
   }
   if (visits < 100000 && process.env.APIFY_TOKEN && process.env.APIFY_ACTOR_ID) {
     try {

@@ -14,6 +14,7 @@ const landing = (u?: string) => { if (!u) return ''; try { const x = new URL(u);
 
 type GoogleAd = { format?: string; adUrl?: string; advertiserName?: string; firstShown?: string; lastShown?: string; creativeId?: string };
 type MetaAd = { id?: string; page_name?: string; title?: string; body?: string; cta_text?: string; link_url?: string; start_date?: string; total_active_time?: { days?: number } | null; snapshot?: { display_format?: string } };
+type GraphAd = { id?: string; page_id?: string; page_name?: string; ad_creative_bodies?: string[]; ad_creative_link_titles?: string[]; ad_creative_link_captions?: string[]; ad_snapshot_url?: string; ad_delivery_start_time?: string; ad_delivery_stop_time?: string; publisher_platforms?: string[]; languages?: string[]; estimated_audience_size?: { lower_bound?: number; upper_bound?: number } };
 type LinkedInAd = { id?: string; advertiser?: string; headline?: string; description?: string; cta?: string; url?: string; image?: unknown; video?: unknown };
 type TikTokAd = { id?: string; name?: string; title?: string; subject?: string; first_shown_date?: number; last_shown_date?: number; videos?: unknown; image_urls?: unknown };
 
@@ -21,7 +22,17 @@ async function google(domain: string): Promise<AdCreative[]> {
   const { data } = await tregCall<{ ads?: GoogleAd[] }>('scrapecreators.x.v1-google-company-ads', { domain });
   return (data.ads || []).map(a => ({ platform: 'GOOGLE' as const, id: a.creativeId || '', advertiser: a.advertiserName || domain, libraryUrl: a.adUrl || '', firstShown: iso(a.firstShown), lastShown: iso(a.lastShown), daysActive: days(a.firstShown, a.lastShown), format: (a.format || 'unknown').toUpperCase(), headline: a.advertiserName || '', body: '', cta: '', landingUrl: domain }));
 }
-async function meta(brand: string): Promise<AdCreative[]> {
+/* Official Meta Ad Library via treg's meta-ad-library connection (free once the
+   team connects a Meta identity): full creative bodies, titles, snapshot links,
+   delivery dates and platforms. search_terms matches the brand name. */
+const regionCountries: Record<string, string> = { US: '["US"]', UK: '["GB"]', EU: '["DE","FR"]', Global: '["ALL"]' };
+const META_FIELDS = 'id,page_id,page_name,ad_creative_bodies,ad_creative_link_titles,ad_creative_link_captions,ad_snapshot_url,ad_delivery_start_time,ad_delivery_stop_time,publisher_platforms,languages,estimated_audience_size';
+async function metaOfficial(brand: string, region: string): Promise<AdCreative[]> {
+  const { data } = await tregCall<{ data?: GraphAd[] }>('meta-ad-library.meta-ads.library.search', { ad_reached_countries: regionCountries[region] || '["US"]', fields: META_FIELDS, search_terms: brand, ad_active_status: 'ALL', limit: 20 }, 45000);
+  return (data.data || []).map(a => ({ platform: 'META' as const, id: a.id || '', advertiser: a.page_name || brand, libraryUrl: a.ad_snapshot_url || '', firstShown: iso(a.ad_delivery_start_time), lastShown: iso(a.ad_delivery_stop_time), daysActive: days(a.ad_delivery_start_time, a.ad_delivery_stop_time), format: (a.publisher_platforms || []).map(p => p.toLowerCase() === 'audience_network' ? 'audience network' : p.toLowerCase()).join(' + ') || 'META', headline: a.ad_creative_link_titles?.[0] || '', body: a.ad_creative_bodies?.[0] || '', cta: '', landingUrl: landing(a.ad_creative_link_captions?.[0]) }));
+}
+async function meta(brand: string, region: string): Promise<AdCreative[]> {
+  try { const ads = await metaOfficial(brand, region); if (ads.length) return ads; } catch { /* adyntel remains when the Meta connection is absent. */ }
   const { data } = await tregPost<{ results?: MetaAd[] }>('adyntel.meta-ads.library.search', { keyword: brand }, 45000);
   return (data.results || []).filter(a => (a.page_name || '').toLowerCase().includes(brand)).map(a => ({ platform: 'META' as const, id: a.id || '', advertiser: a.page_name || brand, libraryUrl: '', firstShown: iso(a.start_date), lastShown: '', daysActive: a.total_active_time?.days ?? days(a.start_date), format: (a.snapshot?.display_format || 'unknown').toUpperCase(), headline: a.title || '', body: a.body || '', cta: a.cta_text || '', landingUrl: landing(a.link_url) }));
 }
@@ -49,7 +60,7 @@ async function triageAd(a: AdCreative): Promise<AdCreative> {
 export async function adIngest(domain: string, region: string): Promise<AdReport | null> {
   if (!hasTreg()) return null;
   const brand = domain.split('.')[0].toLowerCase();
-  const calls = await Promise.allSettled([google(domain), meta(brand), linkedin(brand, region), tiktok(brand)]);
+  const calls = await Promise.allSettled([google(domain), meta(brand, region), linkedin(brand, region), tiktok(brand)]);
   const ads = calls.flatMap(c => c.status === 'fulfilled' ? c.value : []);
   if (!ads.length) return null;
   const winners = ads.filter(a => a.daysActive >= 60 || a.platform === 'LINKEDIN');

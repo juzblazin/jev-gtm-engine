@@ -140,6 +140,7 @@ svg { flex-shrink: 0; }
 .guided-footer { max-width: 1248px; padding: var(--space-8); margin: auto; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: var(--space-6); font-size: var(--text-sm); color: var(--text-secondary); }
 .loading-screen { max-width: 720px; margin: 0 auto; text-align: center; width: 100%; }
 .loading-screen h1 { font-size: var(--text-3xl); }
+.loading-cauldron { width: 200px; height: auto; margin: 0 auto; display: block; }
 .loading-screen > p { margin-top: var(--space-4); }
 .gather-progress { margin: var(--space-8) auto; display: flex; flex-direction: column; gap: var(--space-6); text-align: left; max-width: 560px; }
 .hero-mascot { display: flex; justify-content: center; margin-bottom: var(--space-6); }
@@ -278,3 +279,38 @@ pre { background: var(--surface-muted); border-radius: var(--radius-control); pa
   .compare-table { font-size: var(--text-xs); }
   .compare-table th, .compare-table td { padding: var(--space-2) var(--space-3); }
 }
+
+.country-list { display: flex; flex-direction: column; gap: 2px; }
+.country-item { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+
+.playbook-page { max-width: 1100px; margin: 0 auto; }
+.playbook-controls { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: flex-end; margin: var(--space-6) 0; }
+.playbook-controls > :first-child { flex: 1 1 auto; }
+.playbook-controls .field, .playbook-controls label { min-width: 220px; }
+.playbook-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-4); }
+.playbook-moves { margin: var(--space-3) 0 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); color: var(--fg-muted); font-size: var(--text-sm); }
+.playbook-moves li::marker { color: var(--accent); }
+.playbook-foot { display: flex; flex-direction: column; gap: 2px; margin-top: var(--space-3); font-size: var(--text-sm); }
+
+.ad-group { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3); }
+.ad-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--space-2); }
+.ad-card { display: flex; flex-direction: column; gap: 4px; padding: var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); text-decoration: none; color: var(--fg-default); font-size: var(--text-sm); }
+.ad-card:hover { border-color: var(--border-strong); }
+.ad-card .ad-body { color: var(--fg-muted); }
+.playbook-shot { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: top; display: block; border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.playbook-logo { width: 18px; height: 18px; border-radius: var(--radius-sm); display: block; }
+
+.playbook-detail { max-width: 860px; margin: 0 auto; }
+.playbook-detail .page-heading { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.playbook-hero { margin: var(--space-5) 0 var(--space-6); }
+.playbook-hero-shot { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: top; display: block; border-radius: var(--radius-md); border: 1px solid var(--border-default); }
+.playbook-exemplar { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-3); }
+.playbook-exemplar .playbook-logo { width: 28px; height: 28px; }
+.playbook-exemplar p { margin: 0; }
+.playbook-section { margin: var(--space-6) 0; }
+.playbook-section h2 { margin-bottom: var(--space-3); }
+.playbook-section p { max-width: 72ch; line-height: 1.7; }
+.playbook-steps { display: flex; flex-direction: column; gap: var(--space-2); padding-left: var(--space-6); }
+.playbook-steps li::marker { font-weight: 600; color: var(--accent); }
+.chip-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.site-shot-fallback { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); background: var(--bg-subtle); color: var(--fg-muted); font-size: var(--text-sm); border-radius: var(--radius-md) var(--radius-md) 0 0; }

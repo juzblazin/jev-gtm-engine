@@ -8,5 +8,5 @@ export default function AppHeader(_props: { plan?: Plan; onPlanChange?: (p: Plan
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   useEffect(() => { if (localStorage.getItem('jev_theme') === 'dark') { setTheme('dark'); document.documentElement.dataset.theme = 'dark'; } }, []);
   const toggle = <ThemeSwitch iconOnly theme={theme} onThemeChange={next => { setTheme(next); document.documentElement.dataset.theme = next; localStorage.setItem('jev_theme', next); }}/>;
-  return <div className="app-header"><SiteHeader brand={{ name: 'Boo', href: '/', mark: <Ghost size={32}/> }} items={[{ value: 'home', label: 'Intelligence', href: '/' }, { value: 'history', label: 'Workspace', href: '/workspace' }]} primaryAction={null} secondaryAction={null} menuExtras={toggle} sticky={false}/></div>;
+  return <div className="app-header"><SiteHeader brand={{ name: 'Boo', href: '/', mark: <Ghost size={32}/> }} items={[{ value: 'home', label: 'Intelligence', href: '/' }, { value: 'playbooks', label: 'Playbooks', href: '/playbooks' }, { value: 'history', label: 'Workspace', href: '/workspace' }]} primaryAction={null} secondaryAction={null} menuExtras={toggle} sticky={false}/></div>;
 }

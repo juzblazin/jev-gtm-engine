@@ -12,6 +12,9 @@ const fmt = (n: number | null | undefined, suffix = '') => n == null ? '–' : `
 const pct = (n: number | null | undefined) => n == null ? '–' : `${Math.round(n * 10) / 10}%`;
 const cut = (s: string, n: number) => s.length > n ? `${s.slice(0, n)}…` : s;
 
+const ISO: Record<string, string> = { 'united states': 'US', 'united kingdom': 'GB', 'india': 'IN', 'germany': 'DE', 'france': 'FR', 'canada': 'CA', 'australia': 'AU', 'brazil': 'BR', 'japan': 'JP', 'spain': 'ES', 'italy': 'IT', 'netherlands': 'NL', 'sweden': 'SE', 'poland': 'PL', 'mexico': 'MX', 'south korea': 'KR', 'singapore': 'SG', 'ireland': 'IE', 'israel': 'IL', 'turkey': 'TR', 'indonesia': 'ID', 'vietnam': 'VN', 'philippines': 'PH', 'thailand': 'TH', 'nigeria': 'NG', 'south africa': 'ZA', 'argentina': 'AR', 'colombia': 'CO', 'chile': 'CL', 'ukraine': 'UA', 'russia': 'RU', 'china': 'CN', 'hong kong': 'HK', 'taiwan': 'TW', 'new zealand': 'NZ', 'norway': 'NO', 'denmark': 'DK', 'finland': 'FI', 'austria': 'AT', 'belgium': 'BE', 'switzerland': 'CH', 'portugal': 'PT', 'czech republic': 'CZ', 'romania': 'RO', 'greece': 'GR', 'hungary': 'HU', 'egypt': 'EG', 'saudi arabia': 'SA', 'uae': 'AE', 'united arab emirates': 'AE', 'pakistan': 'PK', 'bangladesh': 'BD', 'malaysia': 'MY' };
+const flag = (name: string) => { const code = ISO[name.toLowerCase()] ?? (name.length === 2 ? name.toUpperCase() : ''); return /^[A-Z]{2}$/.test(code) ? String.fromCodePoint(...[...code].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : '🏳️'; };
+
 function Section({ tag, title, children }: { tag: string; title: string; children: ReactNode }) {
   return <section className="compare-section"><header className="compare-section-head"><h3>{title}</h3><span className="worker-tag">{tag}</span></header>{children}</section>;
 }
@@ -37,14 +40,14 @@ export default function Comparison({ run }: { run: Run }) {
 
     <Section tag="CH-01" title="Traffic and engagement">
       <SigTable sites={sites} focus={focus} rows={[
-        { label: 'Monthly visits', note: m(sites[0]).visits.source, cell: x => fmt(x.visits.value) },
-        { label: 'Monthly traffic trend', note: m(sites[0]).trend.source, cell: x => <Sparkline data={x.trend.value} label="Monthly traffic trend" interactive={false} width={130} height={30}/> },
-        { label: 'Desktop traffic', note: m(sites[0]).desktop.source, cell: x => <>{pct(x.desktop.value)}<span className="cell-sub">{fmt(100 - x.desktop.value)}% mobile</span></> },
-        { label: 'Bounce rate', note: m(sites[0]).bounce.source, cell: x => pct(x.bounce.value) },
-        { label: 'Average visit', note: m(sites[0]).duration.source, cell: x => fmt(x.duration.value, 's') },
-        { label: 'Pages per visit', note: m(sites[0]).pages.source, cell: x => fmt(x.pages.value) },
-        { label: 'Top countries', note: m(sites[0]).countries.source, cell: x => <span className="cell-sub">{x.countries.value.slice(0, 3).map(c => `${c.name} ${c.share}%`).join(', ') || '–'}</span> },
-        { label: 'Top channel', note: m(sites[0]).mix.source, cell: x => <span className="cell-sub">{x.mix.value.slice(0, 2).map(c => `${c.name} ${c.share}%`).join(', ') || '–'}</span> },
+        { label: 'Monthly visits', note: m(sites[0]).visits.source === 'live' ? 'live' : '', cell: x => fmt(x.visits.value) },
+        { label: 'Monthly traffic trend', note: m(sites[0]).trend.source === 'live' ? 'live' : '', cell: x => <Sparkline data={x.trend.value} label="Monthly traffic trend" interactive={false} width={130} height={30}/> },
+        { label: 'Desktop traffic', note: m(sites[0]).desktop.source === 'live' ? 'live' : '', cell: x => <>{pct(x.desktop.value)}<span className="cell-sub">{fmt(100 - x.desktop.value)}% mobile</span></> },
+        { label: 'Bounce rate', note: m(sites[0]).bounce.source === 'live' ? 'live' : '', cell: x => pct(x.bounce.value) },
+        { label: 'Average visit', note: m(sites[0]).duration.source === 'live' ? 'live' : '', cell: x => fmt(x.duration.value, 's') },
+        { label: 'Pages per visit', note: m(sites[0]).pages.source === 'live' ? 'live' : '', cell: x => fmt(x.pages.value) },
+        { label: 'Top countries', note: m(sites[0]).countries.source === 'live' ? 'live' : '', cell: x => <span className="cell-sub country-list">{x.countries.value.slice(0, 3).map(c => <span key={c.name} className="country-item"><span aria-hidden="true">{flag(c.name)}</span> {c.name} {c.share}%</span>)}{!x.countries.value.length && '–'}</span> },
+        { label: 'Top channel', note: m(sites[0]).mix.source === 'live' ? 'live' : '', cell: x => <span className="cell-sub">{x.mix.value.slice(0, 2).map(c => `${c.name} ${c.share}%`).join(', ') || '–'}</span> },
       ]}/>
     </Section>
 
@@ -81,6 +84,8 @@ export default function Comparison({ run }: { run: Run }) {
         if (!r?.ads.length) return [dash, dash, dash, dash];
         return [fmt(r.ads.length), fmt(r.provenWinners), fmt(Math.max(...r.ads.map(a => a.daysActive), 0), 'd'), Mode(r.ads.map(a => a.hookAngle)) ?? dash];
       }}/>
+      <h5 className="sub-head">Meta creatives</h5>
+      {sites.map(s => { const metaAds = (m(s).adIntel?.value?.ads || []).filter(a => a.platform === 'META'); return metaAds.length ? <div key={s.domain} className="ad-group"><span className="mix-domain">{s.domain}</span><div className="ad-cards">{metaAds.slice(0, 4).map(a => <a key={a.id || a.headline} className="ad-card" href={a.libraryUrl || undefined} target="_blank" rel="noreferrer"><b>{cut(a.headline || a.advertiser, 60)}</b><span className="ad-body">{cut(a.body, 140)}</span><span className="cell-sub">{a.format} · {a.daysActive}d{a.libraryUrl ? ' · snapshot' : ''}</span></a>)}</div></div> : null; })}
       <h5 className="sub-head">Channel mix</h5>
       {sites.map(s => <div key={s.domain} className="mix-row"><span className="mix-domain">{s.domain}</span><div className="mix-bars">{m(s).mix.value.map(c => <Progress key={c.name} label={c.name} value={c.share} showValue/>)}</div></div>)}
     </Section>
