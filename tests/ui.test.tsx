@@ -15,13 +15,14 @@ describe('Arc comparison states', () => {
     expect(html).toContain('Comparison data is missing');
     expect(html).toContain('Start an analysis');
   });
-  it('renders both websites and the modeled regional map without browser globals', () => {
+  it('renders both websites and the worker sections without browser globals', () => {
     const snapshots = ['linear.app', 'asana.com'].map(domain => ({ domain, metrics: seededMetrics(domain) }));
     const html = renderToStaticMarkup(createElement(Comparison, { run: { snapshots } as unknown as Run }));
     expect(html).toContain('linear.app');
     expect(html).toContain('asana.com');
     expect(html).toContain('simulated');
-    expect(html).toContain('Schematic world choropleth');
+    expect(html).toContain('compare-section');
+    expect(html).toContain('CH-02');
   });
 });
 describe('original Boo ghost', () => {

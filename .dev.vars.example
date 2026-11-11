@@ -1,3 +1,5 @@
 NEXTJS_ENV=development
 # Runtime secrets for local Wrangler preview only. Never commit .dev.vars.
 # DATABASE_URL=postgresql://user:password@your-neon-host/database?sslmode=require
+# DATABEE_API_KEY=
+# TREG_TOKEN=

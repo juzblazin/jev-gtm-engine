@@ -60,7 +60,7 @@ describe('normalized competitor identity', () => {
     vi.stubEnv('SIMILARWEB_API_KEY', 'test');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ similar_sites: [{ url: 'https://www.LINEAR.app/' }, { site: 'LINEAR.APP' }, { url: 'https://www.Asana.com/pricing' }, { site: 'asana.com/' }, { url: 'monday.com/' }, { url: 'https://' }] })));
     const response = await GET(new Request('http://localhost/api/competitors?domain=https://WWW.Linear.App/'));
-    expect(await response.json()).toEqual({ domains: ['asana.com', 'monday.com'], source: 'live' });
+    expect(await response.json()).toEqual({ competitors: [{ domain: 'asana.com' }, { domain: 'monday.com' }], domains: ['asana.com', 'monday.com'], source: 'live' });
   });
   it('falls back without returning self when the provider only suggests self', async () => {
     vi.stubEnv('SIMILARWEB_API_KEY', 'test');

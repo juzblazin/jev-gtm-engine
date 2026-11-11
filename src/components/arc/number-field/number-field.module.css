@@ -11,7 +11,7 @@
 .label[data-scrub] { cursor: ew-resize; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 /* A hairline shell. Focus darkens the border only (the library draws no rings); a typed value past a limit tints it with the warning
    role instead, calm rather than alarming. Set --number-field-width to resize the shell. */
-.control { display: flex; align-items: center; width: min(100%, var(--nf-width)); min-height: var(--nf-height); gap: 2px; border: 1px solid var(--border); border-radius: var(--radius-control); padding: var(--nf-inset); background: var(--surface); transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-standard) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
+.control { display: flex; align-items: center; width: min(100%, var(--nf-width)); min-height: var(--nf-height); gap: 2px; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: var(--nf-inset); background: var(--surface); transition: border-color var(--duration-fast) var(--ease-standard), background-color var(--duration-standard) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard); }
 @media (hover: hover) and (pointer: fine) { .control:hover, .field:has(.label[data-scrub]:hover) .control { border-color: var(--border-strong); } }
 .control[data-scrubbing] { border-color: var(--foreground); }
 .control:has(input:focus) { border-color: var(--foreground); }

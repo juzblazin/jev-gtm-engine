@@ -1,4 +1,6 @@
 import { enforcePlan, type Plan } from './plans';
+export type CompetitorSuggestion = { domain: string; title?: string; description?: string; visits?: number; favicon?: string; globalRank?: number | null; categoryRank?: number | null };
+export function formatVisits(visits: number) { return visits >= 1e6 ? `${(visits / 1e6).toFixed(1)}M` : visits >= 1e3 ? `${(visits / 1e3).toFixed(1)}K` : `${Math.round(visits)}`; }
 const groups = [ ['linear.app', 'asana.com', 'monday.com', 'clickup.com', 'notion.so', 'trello.com'], ['stripe.com', 'adyen.com', 'checkout.com', 'paypal.com', 'paddle.com', 'squareup.com'], ['hubspot.com', 'salesforce.com', 'attio.com', 'pipedrive.com', 'close.com', 'zoho.com'], ['figma.com', 'sketch.com', 'canva.com', 'framer.com', 'penpot.app', 'adobe.com'], ['vercel.com', 'netlify.com', 'render.com', 'railway.com', 'fly.io', 'cloudflare.com'] ];
 export function normalizeHost(value: string) { const url = value.trim(); return new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(url) ? url : `https://${url}`).hostname.toLowerCase().replace(/^www\./, ''); }
 export class SelectionError extends Error {}

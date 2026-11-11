@@ -4,7 +4,7 @@ export const inputSchema = z.object({ product: z.string().url(), competitors: z.
 export type Input = z.infer<typeof inputSchema>;
 export type Snippet = { id: string; domain: string; channel: string; text: string; source: 'live' | 'simulated' };
 export type Evidence = Snippet & { category: 'Financial' | 'UX Friction' | 'Other'; severity: number; confidence: number; quote: string; velocity?: number };
-export type Snapshot = { domain: string; fetchedAt: string; snippets: Snippet[]; visits: number; router: string; metrics?: SiteMetrics };
+export type Snapshot = { domain: string; fetchedAt: string; snippets: Snippet[]; visits: number; router: string; metrics?: SiteMetrics; cards?: import('./pipeline/cards').EvidenceCard[] };
 export const synthesisSchema = z.object({
   summary: z.string(), icp: z.object({ industry: z.string(), size: z.string(), revenue: z.string(), triggers: z.array(z.string()) }),
   matrix: z.array(z.object({ dimension: z.string(), product: z.string(), competitors: z.array(z.object({ domain: z.string(), finding: z.string() })) })),

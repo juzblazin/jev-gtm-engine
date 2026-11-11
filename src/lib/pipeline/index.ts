@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { PLANS } from '@/lib/plans';
 import { get, put } from '@/lib/store';
 import type { Input, Run } from '@/lib/types';
-import { ingest } from './ingest';
+import { ingest, channels } from './ingest';
 import { triage } from './triage';
 import { synthesize, template } from './synthesize';
 import { scoreCompliance } from './compliance';
@@ -15,8 +15,8 @@ export async function pipeline(input: Input, workspace: string, emit: (data: unk
   const results = await Promise.all(urls.map(url => ingest(url, (channel, percent) => {
     percentages.set(url + channel, percent);
     const channelPercent = Math.round(urls.reduce((n, u) => n + (percentages.get(u + channel) || 0), 0) / urls.length);
-    emit({ type: 'channel', channel, percent: channelPercent, overall: Math.round([...percentages.values()].reduce((a, b) => a + b, 0) / (urls.length * 6)) });
-  })));
+    emit({ type: 'channel', channel, percent: channelPercent, overall: Math.round([...percentages.values()].reduce((a, b) => a + b, 0) / (urls.length * channels.length)) });
+  }), input.region));
   timings.ingestion = Date.now() - t; stage('Layer 1', `${results.filter(r => r.cached).length}/${results.length} domains from cache`, timings.ingestion);
   if (guided) {
     timings.total = Date.now() - start;
