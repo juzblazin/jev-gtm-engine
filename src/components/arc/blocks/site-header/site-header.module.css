@@ -38,6 +38,7 @@
 }
 .menuButton { position: relative; display: none; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 12px; background: none; color: var(--foreground); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard); }
 .menuButton:active { background: var(--surface-muted); }
+.menuExtras { display: flex; align-items: center; }
 .menuIcon { display: grid; place-items: center; }
 
 /* Mega menu panel: one surface whose height springs to each section's content. */

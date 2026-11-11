@@ -72,6 +72,10 @@ export interface SiteHeaderProps {
   secondaryAction?: SiteHeaderAction | null;
   /** The one primary action at the end of the bar. Pass null to hide it. */
   primaryAction?: SiteHeaderAction | null;
+  /** Extra controls rendered inside the collapsed menu sheet, such as a theme or plan picker. */
+  sheetActions?: ReactNode;
+  /** Controls shown at the end of the action row, beside the menu button when the header is collapsed. */
+  menuExtras?: ReactNode;
   /** Sticks to the top of its scroll container. Defaults to true. */
   sticky?: boolean;
   /** The element that scrolls, when it is not the window. The header turns solid once it scrolls. */
@@ -195,6 +199,8 @@ export const SiteHeader = forwardRef<HTMLElement, SiteHeaderProps>(function Site
   onNavigate,
   secondaryAction = { label: "Sign in" },
   primaryAction = { label: "Get Arc" },
+  sheetActions,
+  menuExtras,
   sticky = true,
   scrollContainer,
   scrollThreshold = 8,
@@ -412,6 +418,7 @@ export const SiteHeader = forwardRef<HTMLElement, SiteHeaderProps>(function Site
         <div className={styles.actions}>
           {secondaryAction && actionNode(secondaryAction, "secondary", styles.wideOnly)}
           {primaryAction && actionNode(primaryAction, "primary")}
+          {menuExtras && <span className={styles.menuExtras}>{menuExtras}</span>}
           <button ref={menuButtonRef} type="button" className={styles.menuButton} aria-expanded={menuOpen} aria-controls={`${id}-sheet`} aria-label={menuOpen ? "Close menu" : "Open menu"} onClick={() => { if (menuOpen) closeMenu(); else setMenuOpen(true); }}>
             <AnimatePresence initial={false} mode="popLayout">
               <motion.span key={menuOpen ? "close" : "open"} className={styles.menuIcon} initial={reduced ? { opacity: 0 } : { opacity: 0, rotate: menuOpen ? -45 : 45, scale: .8 }} animate={{ opacity: 1, rotate: 0, scale: 1 }} exit={reduced ? { opacity: 0 } : { opacity: 0, rotate: menuOpen ? 45 : -45, scale: .8 }} transition={reduced ? { duration: 0 } : { ...motionTokens.spring.snappy, opacity: { duration: motionTokens.duration.instant } }}>
@@ -498,9 +505,10 @@ export const SiteHeader = forwardRef<HTMLElement, SiteHeaderProps>(function Site
                 </motion.li>;
               })}
             </ul>
-            {(secondaryAction || primaryAction) && <motion.div className={styles.sheetActions} initial={reduced ? false : { opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionTokens.duration.standard, ease: enter, delay: reduced ? 0 : .04 + items.length * motionTokens.stagger.item }}>
+            {(secondaryAction || primaryAction || sheetActions) && <motion.div className={styles.sheetActions} initial={reduced ? false : { opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: motionTokens.duration.standard, ease: enter, delay: reduced ? 0 : .04 + items.length * motionTokens.stagger.item }}>
               {secondaryAction && actionNode(secondaryAction, "secondary")}
               {primaryAction && actionNode(primaryAction, "primary")}
+              {sheetActions}
             </motion.div>}
           </nav>
         </motion.div>
