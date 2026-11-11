@@ -5,6 +5,7 @@
   "compatibility_date": "2026-11-10",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "r2_buckets": [{ "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "boo-gtm-cache" }],
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "boo-gtm-engine" }],
   "vars": { "BOO_RUNTIME": "cloudflare" }
 }
