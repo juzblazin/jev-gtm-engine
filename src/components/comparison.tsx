@@ -1,10 +1,13 @@
 'use client';
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type FormEvent, type ReactNode } from 'react';
 import Link from 'next/link';
+import { Lightbulb, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
 import { seededMetrics, type SiteMetrics } from '@/lib/metrics';
+import { formatVisits, normalizeHost } from '@/lib/competitors';
+import { PLANS } from '@/lib/plans';
 import type { Run, Snapshot } from '@/lib/types';
 import SegmentedControl from './arc/segmented-control/segmented-control';
-import { Badge, EmptyState, Progress, Sparkline } from './ui';
+import { Badge, Button, EmptyState, Input, Progress, Sparkline } from './ui';
 
 export function SourceBadge({ source }: { source: string }) { return <span className="source-badge"><Badge>{source}</Badge></span>; }
 
@@ -27,16 +30,59 @@ function SiteTable({ sites, columns, rows }: { sites: Snapshot[]; columns: strin
 const dash = <span className="cell-sub">–</span>;
 function Mode<T>(vals: T[]): T | undefined { const c = new Map<T, number>(); vals.forEach(v => v !== undefined && c.set(v, (c.get(v) ?? 0) + 1)); return [...c].sort((a, b) => b[1] - a[1])[0]?.[0]; }
 
-export default function Comparison({ run }: { run: Run }) {
+const mm = (s: Snapshot) => (s as Snapshot & { _m?: SiteMetrics })._m ?? { ...seededMetrics(s.domain), ...s.metrics };
+
+function YourCompetitors({ run, onRunChange }: { run: Run; onRunChange?: (run: Run) => void }) {
+  const [open, setOpen] = useState(false), [draft, setDraft] = useState(''), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  const editable = Boolean(onRunChange);
+  const sites = run.snapshots;
+  const max = PLANS[run.input.plan]?.max_competitors ?? 5;
+  const canAdd = editable && run.input.competitors.length < max, removable = editable && sites.length > 2;
+  async function send(method: 'POST' | 'DELETE', host: string) {
+    if (busy) return;
+    setErr(''); setBusy(true);
+    try {
+      const r = await fetch(`/api/run/${run.id}/competitors`, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: `https://${host}` }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Could not update competitors.');
+      onRunChange?.(d.run); setDraft(''); setOpen(false);
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  }
+  const submit = (e: FormEvent) => { e.preventDefault(); try { send('POST', normalizeHost(draft)); } catch { setErr('Enter a valid competitor domain.'); } };
+  const mine = new Map(mm(sites[0]).countries.value.map(c => [c.name, c.share]));
+  const overlap = (s: Snapshot) => {
+    const theirs = mm(s).countries.value;
+    if (!mine.size || !theirs.length) return null;
+    return theirs.reduce((sum, c) => sum + Math.min(c.share, mine.get(c.name) ?? 0), 0) / 100;
+  };
+  const band = (v: number) => v >= .6 ? 'High overlap' : v >= .4 ? 'Medium overlap' : 'Low overlap';
+  return <section className="your-competitors">
+    <h2>Your <span>competitors</span></h2>
+    <p className="muted">Track and compare your performance against the sites that matter.</p>
+    <div className="competitor-bar" role="list">
+      {sites.map((s, i) => <Fragment key={s.domain}>{i === 1 ? <span className="chip-vs" aria-hidden="true">vs.</span> : null}<span className="domain-chip" role="listitem"><img className="chip-favicon" src={`https://www.google.com/s2/favicons?domain=${s.domain}&sz=64`} alt=""/><span className="chip-domain">{s.domain}</span>{i === 0 ? <Badge>You</Badge> : null}{i > 0 && removable ? <button type="button" className="chip-remove" aria-label={`Remove ${s.domain}`} disabled={busy} onClick={() => send('DELETE', s.domain)}><X size={12} aria-hidden="true"/></button> : null}</span></Fragment>)}
+      {canAdd ? <button type="button" className="chip-add" onClick={() => setOpen(o => !o)} aria-expanded={open}><Plus size={13} aria-hidden="true"/> Add competitor</button> : null}
+    </div>
+    {open ? <form className="chip-add-form" onSubmit={submit}><Input label="Competitor domain" placeholder="competitor.com" value={draft} onChange={e => setDraft(e.target.value)} required/><Button variant="secondary" loading={busy}>Add competitor</Button></form> : null}
+    {busy ? <p className="hint" role="status">Updating the comparison. A fresh gather can take a minute.</p> : null}
+    {err ? <p className="chip-error" role="alert">{err}</p> : null}
+    <div className="yc-table-wrap"><table className="yc-table"><thead><tr><th scope="col">Domain</th><th scope="col">Monthly visits</th><th scope="col">Trend</th><th scope="col">Overlap</th><th scope="col">Actions</th></tr></thead><tbody>{sites.map((s, i) => { const ov = i === 0 ? null : overlap(s); return <tr key={s.domain}><td><span className="yc-domain"><img src={`https://www.google.com/s2/favicons?domain=${s.domain}&sz=64`} alt=""/>{s.domain}{i === 0 ? <Badge>You</Badge> : null}</span></td><td className="yc-num">{formatVisits(mm(s).visits.value || s.visits)}</td><td><Sparkline data={mm(s).trend.value} label={`${s.domain} traffic trend`} interactive={false} width={110} height={26}/></td><td className="yc-num">{ov == null ? '—' : <><b>{Math.round(ov * 100)}%</b><span className="cell-sub">{band(ov)}</span></>}</td><td>{i > 0 && removable ? <button type="button" className="yc-remove" aria-label={`Remove ${s.domain}`} disabled={busy} onClick={() => send('DELETE', s.domain)}><Trash2 size={15} aria-hidden="true"/></button> : null}</td></tr>; })}</tbody></table></div>
+    <p className="yc-tip"><Lightbulb size={15} aria-hidden="true"/> Tip: Add 3–5 competitors to get the most valuable insights.</p>
+    <p className="yc-fine"><ShieldCheck size={13} aria-hidden="true"/> Your selections stay private to this workspace. Traffic figures are public estimates refreshed every 7 days.</p>
+  </section>;
+}
+
+export default function Comparison({ run, onRunChange }: { run: Run; onRunChange?: (run: Run) => void }) {
   const [index, setIndex] = useState('1');
   const sites = run.snapshots;
   if (sites.length < 2) return <EmptyState title="Comparison data is missing" description="Start another landscape to gather a fresh snapshot." action={<Link href="/">Start an analysis</Link>}/>;
-  const focus = Number(index);
+  const focus = Math.min(Math.max(1, Number(index)), sites.length - 1);
   sites.forEach(s => { (s as Snapshot & { _m?: SiteMetrics })._m = { ...seededMetrics(s.domain), ...s.metrics }; });
   const m = (s: Snapshot) => (s as Snapshot & { _m: SiteMetrics })._m;
 
   return <div className="section-stack">
-    <div className="comparison-control"><p>Compare the signals before deciding where to act.</p><div className="competitor-switch"><span>Compare competitor</span><SegmentedControl label="Compare competitor" value={index} onValueChange={setIndex} options={sites.slice(1).map((s, i) => ({ value: String(i + 1), label: s.domain }))}/></div></div>
+    {run.input ? <YourCompetitors run={run} onRunChange={onRunChange}/> : null}
+    <div className="comparison-control"><p>Compare the signals before deciding where to act.</p><div className="competitor-switch"><span>Compare competitor</span><SegmentedControl label="Compare competitor" value={String(focus)} onValueChange={setIndex} options={sites.slice(1).map((s, i) => ({ value: String(i + 1), label: s.domain }))}/></div></div>
 
     <Section tag="CH-01" title="Traffic and engagement">
       <SigTable sites={sites} focus={focus} rows={[

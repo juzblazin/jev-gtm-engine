@@ -1,6 +1,7 @@
 import { normalizeHost, suggestions, type CompetitorSuggestion } from '@/lib/competitors';
 import { aisaSimilarSites, hasAisa } from '@/lib/aisa';
 import { hasTreg, tregCall, tregPost } from '@/lib/treg';
+import { apifySimilarweb, hasApify, similarwebSites } from '@/lib/apify';
 
 const DOMAIN_RE = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
 
@@ -18,6 +19,26 @@ export async function GET(req: Request) {
   let domain: string;
   try { domain = normalizeHost(new URL(req.url).searchParams.get('domain') || ''); } catch { return Response.json({ error: 'Enter a valid public domain.' }, { status: 400 }); }
   if (!DOMAIN_RE.test(domain)) return Response.json({ error: 'Enter a valid public domain.' }, { status: 400 });
+  /* Primary: Similarweb similar-sites and search competitors via the Apify MCP
+     gateway (~$0.03/run) — replaces the Similarweb API, DataBee and AIsa below. */
+  if (hasApify()) {
+    try {
+      const row = await apifySimilarweb(domain, ['similar_sites', 'search_competitors'], 120000);
+      const seen = new Set<string>();
+      const competitors: CompetitorSuggestion[] = [];
+      for (const s of similarwebSites(row || {})) {
+        const host = validHost(s.domain);
+        if (!host || host === domain || seen.has(host) || HUB_DOMAINS.has(host)) continue;
+        seen.add(host);
+        competitors.push({ domain: host, title: s.title, description: s.description, visits: s.visits, globalRank: s.globalRank ?? null });
+        if (competitors.length >= 8) break;
+      }
+      if (competitors.length) return Response.json({ competitors, domains: competitors.map(c => c.domain), source: 'apify' });
+      /* A confirmed not_found row means the source has no coverage for the domain;
+         report that instead of inventing peers, matching the DataBee contract. */
+      if (row?.status === 'not_found') return Response.json({ competitors: [], domains: [], source: 'apify', coverage: 'insufficient_data' });
+    } catch { /* Other providers remain available when Apify is unreachable. */ }
+  }
   if (process.env.DATABEE_API_KEY) {
     try {
       const r = await fetch(`https://api.databee.dev/siteatlas/site-similar?url=${encodeURIComponent(domain)}`, { headers: { Authorization: `Bearer ${process.env.DATABEE_API_KEY}` }, signal: AbortSignal.timeout(10000) });

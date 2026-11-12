@@ -11,6 +11,7 @@ import type { Snapshot, Snippet } from '@/lib/types';
 import { seededMetrics } from '@/lib/metrics';
 import { aisaUse, hasAisa } from '@/lib/aisa';
 import { hasTreg, tregPost } from '@/lib/treg';
+import { apifySimilarweb, hasApify, similarwebOverview } from '@/lib/apify';
 
 export function isFresh(date: string, now = Date.now()) { const age = now - Date.parse(date); return age >= 0 && age < 7 * 86400000; }
 export const domainOf = (url: string) => new URL(url).hostname.toLowerCase();
@@ -44,7 +45,18 @@ export async function ingest(url: string, progress: (channel: string, percent: n
   const metrics = seededMetrics(domain);
   let visits = metrics.visits.value, router = 'deterministic traffic estimate', trafficSource: 'live' | 'simulated' = 'simulated';
   progress('traffic', 10);
-  if (hasDatabee()) {
+  /* Primary: agentx/similarweb-pro-scraper via the Apify MCP gateway. One paid run
+     (~$0.03) covers engagement, trend, channels, geography, keywords, referrals and
+     backlinks — replacing the Similarweb API, DataBee and AIsa calls below. */
+  if (hasApify()) {
+    try {
+      const row = await apifySimilarweb(domain, ['website_performance', 'keywords', 'referral'], 180000);
+      const overview = row ? similarwebOverview(row) : null;
+      if (!overview) throw new Error('Apify returned no coverage');
+      Object.assign(metrics, overview.metrics); visits = overview.visits; router = 'Apify · Similarweb Pro'; trafficSource = 'live';
+    } catch { router = 'Apify unavailable'; }
+  }
+  if (trafficSource !== 'live' && hasDatabee()) {
     try {
       const overview = await databeeOverview(domain);
       if (overview) { Object.assign(metrics, overview.metrics); visits = overview.visits; router = 'DataBee · Similarweb estimates'; trafficSource = 'live'; }
@@ -87,13 +99,7 @@ export async function ingest(url: string, progress: (channel: string, percent: n
       if (trend.length) metrics.trend = live(trend);
     } catch { router += ' → AIsa unavailable (simulated fallback)'; }
   }
-  if (visits < 100000 && process.env.APIFY_TOKEN && process.env.APIFY_ACTOR_ID) {
-    try {
-      const r = await fetch(`https://api.apify.com/v2/acts/${encodeURIComponent(process.env.APIFY_ACTOR_ID)}/run-sync-get-dataset-items?token=${encodeURIComponent(process.env.APIFY_TOKEN)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ startUrls: [{ url }] }), signal: AbortSignal.timeout(10000) });
-      if (!r.ok) throw new Error('Apify unavailable'); const data = await r.json(); const n = data[0]?.visits;
-      if (typeof n !== 'number') throw new Error('Actor must return visits'); visits = n; router = 'Apify (<100k route)'; trafficSource = 'live';
-    } catch { router += ' → Apify unavailable (simulated fallback)'; }
-  } else if (visits < 100000 && process.env.ONELOOKUP_API_URL && process.env.ONELOOKUP_API_KEY) {
+  if (visits < 100000 && process.env.ONELOOKUP_API_URL && process.env.ONELOOKUP_API_KEY) {
     try { const r = await fetchPublic(process.env.ONELOOKUP_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.ONELOOKUP_API_KEY}` }, body: JSON.stringify({ domain }) }); const d = await r.json(); if (!r.ok || typeof d.visits !== 'number') throw new Error('Invalid traffic'); visits = d.visits; trafficSource = 'live'; router = '1Lookup adapter'; } catch { router += ' → 1Lookup unavailable'; }
   }
   const seoPromise = seoIngest(domain, region).catch(() => null);
