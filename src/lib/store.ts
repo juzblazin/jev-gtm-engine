@@ -12,7 +12,7 @@ export async function get<T>(key: string): Promise<T | undefined> {
   return (await localStore()).getFile<T>(key);
 }
 export async function put(key: string, value: unknown) {
-  if (process.env.DATABASE_URL) { await db().insert(records).values({ key, value }).onConflictDoUpdate({ target: records.key, set: { value } }); return; }
+  if (process.env.DATABASE_URL) { try { await db().insert(records).values({ key, value }).onConflictDoUpdate({ target: records.key, set: { value } }); } catch (e) { const c = (e as { cause?: unknown }).cause ?? e; console.error(`put ${key} failed: ${c instanceof Error ? `${c.name}: ${c.message}` : JSON.stringify(c)}`); throw e; } return; }
   await (await localStore()).putFile(key, value);
 }
 const locks = new Map<string, Promise<unknown>>();
